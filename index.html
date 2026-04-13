@@ -70,6 +70,7 @@
     cursor:pointer;
   }
 
+  /* 🔥 VERSION (INI DOANG YANG DITAMBAH) */
   #version {
     position:fixed;
     bottom:20px;
@@ -107,14 +108,15 @@
   </div>
 </div>
 
+<!-- 🔥 VERSION TEXT -->
 <div id="version"></div>
 
 <div id="info">Tap layar untuk spawn object</div>
 
 <script type="module">
 
-// 🔥 VERSION
-const APP_VERSION = "v1.0.4";
+// 🔥 EDIT DI SINI DOANG
+const APP_VERSION = "v1.0.0";
 document.getElementById("version").innerText = APP_VERSION;
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
@@ -122,29 +124,14 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.m
 let scene, camera, renderer;
 let raycaster, floor, reticle;
 
-// 🔥 GYRO DATA
-let targetRotation = { x:0, y:0, z:0 };
-let currentRotation = { x:0, y:0, z:0 };
-
-// CAMERA BG
+// CAMERA
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream => {
   document.getElementById("camera").srcObject = stream;
 });
 
 // START
-window.startAR = async function() {
-
-  // iOS permission
-  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    await DeviceOrientationEvent.requestPermission();
-  }
-
-  window.addEventListener("deviceorientation", (e) => {
-    targetRotation.y = THREE.MathUtils.degToRad(e.alpha || 0);
-    targetRotation.x = THREE.MathUtils.degToRad((e.beta || 0) - 90);
-    targetRotation.z = THREE.MathUtils.degToRad(e.gamma || 0);
-  });
+window.startAR = function() {
 
   const home = document.getElementById("home");
   const glass = document.getElementById("glassOverlay");
@@ -171,35 +158,21 @@ function init() {
 
   renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
 
   document.body.appendChild(renderer.domElement);
 
-  // LIGHT
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-  scene.add(hemi);
+  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+  scene.add(light);
 
-  const dir = new THREE.DirectionalLight(0xffffff, 1);
-  dir.position.set(2,4,2);
-  dir.castShadow = true;
-  scene.add(dir);
-
-  // FLOOR
   floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20,20),
-    new THREE.ShadowMaterial({ opacity: 0.3 })
+    new THREE.MeshBasicMaterial({ visible:false })
   );
   floor.rotation.x = -Math.PI/2;
-  floor.receiveShadow = true;
   scene.add(floor);
 
-  // RETICLE
   const ringGeo = new THREE.RingGeometry(0.15, 0.2, 32);
-  const ringMat = new THREE.MeshBasicMaterial({
-    color:0xffffff,
-    transparent:true,
-    opacity:0.7
-  });
+  const ringMat = new THREE.MeshBasicMaterial({ color:0xffffff });
 
   reticle = new THREE.Mesh(ringGeo, ringMat);
   reticle.rotation.x = -Math.PI/2;
@@ -220,46 +193,26 @@ function updateReticle() {
   const hits = raycaster.intersectObject(floor);
 
   if (hits.length > 0) {
-    reticle.visible = true;
     reticle.position.copy(hits[0].point);
-  } else {
-    reticle.visible = false;
   }
 }
 
 // SPAWN
 function spawnObject() {
-  if (!reticle.visible) return;
-
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(0.25,0.25,0.25),
-    new THREE.MeshStandardMaterial({
-      color:0xffffff,
-      metalness:0.6,
-      roughness:0.3
-    })
+    new THREE.MeshBasicMaterial({ color:0xffffff })
   );
 
   mesh.position.copy(reticle.position);
   mesh.position.y += 0.125;
-  mesh.castShadow = true;
 
   scene.add(mesh);
 }
 
-// LOOP (🔥 SMOOTH GYRO)
+// LOOP
 function animate() {
   requestAnimationFrame(animate);
-
-  // smoothing biar gak geter
-  currentRotation.x += (targetRotation.x - currentRotation.x) * 0.1;
-  currentRotation.y += (targetRotation.y - currentRotation.y) * 0.1;
-  currentRotation.z += (targetRotation.z - currentRotation.z) * 0.1;
-
-  camera.rotation.order = "YXZ";
-  camera.rotation.x = currentRotation.x;
-  camera.rotation.y = currentRotation.y;
-  camera.rotation.z = currentRotation.z;
 
   updateReticle();
 
