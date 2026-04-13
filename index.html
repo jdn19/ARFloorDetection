@@ -108,13 +108,11 @@
 </div>
 
 <div id="version"></div>
-
 <div id="info">Tap layar untuk spawn object</div>
 
 <script type="module">
 
-// 🔥 VERSION
-const APP_VERSION = "v1.0.5";
+const APP_VERSION = "v1.0.6";
 document.getElementById("version").innerText = APP_VERSION;
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
@@ -122,20 +120,16 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.m
 let scene, camera, renderer;
 let raycaster, floor, reticle;
 
-// GYRO
 let targetRot = {x:0,y:0,z:0};
 let currentRot = {x:0,y:0,z:0};
 
-// CAMERA BG
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream => {
   document.getElementById("camera").srcObject = stream;
 });
 
-// START
 window.startAR = async function() {
 
-  // iOS permission
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     await DeviceOrientationEvent.requestPermission();
   }
@@ -161,7 +155,6 @@ window.startAR = async function() {
   },400);
 };
 
-// INIT
 function init() {
 
   scene = new THREE.Scene();
@@ -171,15 +164,12 @@ function init() {
 
   renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
 
   document.body.appendChild(renderer.domElement);
 
-  // LIGHT
-  const hemi = new THREE.HemisphereLight(0xffffff,0x444444,1);
-  scene.add(hemi);
+  const light = new THREE.HemisphereLight(0xffffff,0x444444,1);
+  scene.add(light);
 
-  // FLOOR
   floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20,20),
     new THREE.MeshBasicMaterial({visible:false})
@@ -187,7 +177,6 @@ function init() {
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  // RETICLE
   const ringGeo = new THREE.RingGeometry(0.15,0.2,32);
   const ringMat = new THREE.MeshBasicMaterial({color:0xffffff});
 
@@ -215,22 +204,24 @@ function updateReticle() {
   }
 }
 
-// SPAWN
+// SPAWN (🔥 FIXED WORLD POSITION)
 function spawnObject() {
   if (!reticle.visible) return;
+
+  const spawnPos = reticle.position.clone(); // 🔥 penting
 
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(0.25,0.25,0.25),
     new THREE.MeshStandardMaterial({color:0xffffff})
   );
 
-  mesh.position.copy(reticle.position);
+  mesh.position.copy(spawnPos);
   mesh.position.y += 0.125;
 
   scene.add(mesh);
 }
 
-// LOOP (SMOOTH GYRO)
+// LOOP
 function animate() {
   requestAnimationFrame(animate);
 
@@ -248,14 +239,12 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// RESIZE
 window.addEventListener("resize", ()=>{
-  if (!camera || !renderer) return;
-
   camera.aspect = window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
 </script>
 
 </body>
