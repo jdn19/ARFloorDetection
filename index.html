@@ -107,14 +107,15 @@
   </div>
 </div>
 
+<!-- VERSION -->
 <div id="version"></div>
 
 <div id="info">Tap layar untuk spawn object</div>
 
 <script type="module">
 
-// 🔥 MANUAL VERSION (EDIT DI SINI DOANG)
-const APP_VERSION = "v1.0.2";
+// 🔥 EDIT VERSION DI SINI DOANG
+const APP_VERSION = "v1.0.3";
 document.getElementById("version").innerText = APP_VERSION;
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
@@ -165,8 +166,10 @@ function init() {
 
   document.body.appendChild(renderer.domElement);
 
+  // GYRO
   controls = new DeviceOrientationControls(camera);
 
+  // LIGHT
   const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
   scene.add(hemi);
 
@@ -175,6 +178,7 @@ function init() {
   dir.castShadow = true;
   scene.add(dir);
 
+  // FLOOR
   floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20,20),
     new THREE.ShadowMaterial({ opacity: 0.3 })
@@ -183,6 +187,7 @@ function init() {
   floor.receiveShadow = true;
   scene.add(floor);
 
+  // RETICLE
   const ringGeo = new THREE.RingGeometry(0.15, 0.2, 32);
   const ringMat = new THREE.MeshBasicMaterial({
     color:0xffffff,
@@ -258,4 +263,4 @@ window.addEventListener("resize", () => {
 </script>
 
 </body>
-</html> 
+</html>
