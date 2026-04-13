@@ -5,10 +5,14 @@
 <title>Vision AR</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
+<!-- 🔥 CACHE BUSTER -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <style>
   body { margin:0; overflow:hidden; font-family:sans-serif; }
 
-  /* CAMERA */
   video {
     position:fixed;
     top:0; left:0;
@@ -17,7 +21,6 @@
     z-index:-2;
   }
 
-  /* GLASS OVERLAY */
   #glassOverlay {
     position:fixed;
     top:0; left:0;
@@ -29,7 +32,6 @@
     pointer-events:none;
   }
 
-  /* HOMEPAGE */
   #home {
     position:fixed;
     top:0; left:0;
@@ -73,19 +75,19 @@
     cursor:pointer;
   }
 
-  /* VERSION LABEL */
+  /* 🔥 VERSION FIX (PASTI MUNCUL) */
   #version {
-    position:absolute;
+    position:fixed;
     bottom:20px;
+    left:0;
     width:100%;
     text-align:center;
     color:white;
-    opacity:0.5;
+    opacity:0.6;
     font-size:12px;
-    letter-spacing:1px;
+    z-index:20;
   }
 
-  /* INFO */
   #info {
     position:absolute;
     top:20px;
@@ -109,21 +111,21 @@
     <div class="subtitle">Seamless Reality Experience</div>
     <button class="btn" onclick="startAR()">Enter</button>
   </div>
-
-  <!-- VERSION -->
-  <div id="version">v1.0.0</div>
 </div>
+
+<!-- 🔥 VERSION -->
+<div id="version">v1.0.1</div>
 
 <div id="info">Tap layar untuk spawn object</div>
 
 <script type="module">
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
-import { DeviceOrientationControls } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/DeviceOrientationControls.js";
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js?v=1.0.1";
+import { DeviceOrientationControls } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/DeviceOrientationControls.js?v=1.0.1";
 
 let scene, camera, renderer;
 let raycaster, floor, controls, reticle;
 
-// CAMERA BG
+// CAMERA
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream => {
   document.getElementById("camera").srcObject = stream;
@@ -132,7 +134,6 @@ navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 // START
 window.startAR = async function() {
 
-  // permission gyro (iOS)
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     await DeviceOrientationEvent.requestPermission();
   }
@@ -157,13 +158,7 @@ function init() {
 
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(
-    70,
-    window.innerWidth / window.innerHeight,
-    0.01,
-    20
-  );
-
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
   camera.position.set(0, 1.6, 2);
 
   renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
@@ -212,7 +207,7 @@ function init() {
   animate();
 }
 
-// UPDATE RETICLE
+// RETICLE
 function updateReticle() {
   const center = new THREE.Vector2(0,0);
   raycaster.setFromCamera(center, camera);
@@ -262,7 +257,7 @@ function animate() {
 window.addEventListener("resize", () => {
   if (!camera || !renderer) return;
 
-  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.aspect = window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
