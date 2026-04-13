@@ -5,11 +5,6 @@
 <title>Vision AR</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
-<!-- 🔥 CACHE BUSTER -->
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-
 <style>
   body { margin:0; overflow:hidden; font-family:sans-serif; }
 
@@ -75,7 +70,6 @@
     cursor:pointer;
   }
 
-  /* 🔥 VERSION FIX (PASTI MUNCUL) */
   #version {
     position:fixed;
     bottom:20px;
@@ -113,14 +107,18 @@
   </div>
 </div>
 
-<!-- 🔥 VERSION -->
-<div id="version">v1.0.1</div>
+<div id="version"></div>
 
 <div id="info">Tap layar untuk spawn object</div>
 
 <script type="module">
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js?v=1.0.1";
-import { DeviceOrientationControls } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/DeviceOrientationControls.js?v=1.0.1";
+
+// 🔥 MANUAL VERSION (EDIT DI SINI DOANG)
+const APP_VERSION = "v1.0.2";
+document.getElementById("version").innerText = APP_VERSION;
+
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
+import { DeviceOrientationControls } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/DeviceOrientationControls.js";
 
 let scene, camera, renderer;
 let raycaster, floor, controls, reticle;
@@ -167,10 +165,8 @@ function init() {
 
   document.body.appendChild(renderer.domElement);
 
-  // GYRO
   controls = new DeviceOrientationControls(camera);
 
-  // LIGHT
   const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
   scene.add(hemi);
 
@@ -179,7 +175,6 @@ function init() {
   dir.castShadow = true;
   scene.add(dir);
 
-  // FLOOR
   floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20,20),
     new THREE.ShadowMaterial({ opacity: 0.3 })
@@ -188,7 +183,6 @@ function init() {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  // RETICLE
   const ringGeo = new THREE.RingGeometry(0.15, 0.2, 32);
   const ringMat = new THREE.MeshBasicMaterial({
     color:0xffffff,
@@ -264,4 +258,4 @@ window.addEventListener("resize", () => {
 </script>
 
 </body>
-</html>
+</html> 
