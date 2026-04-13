@@ -112,13 +112,13 @@
 
 <script type="module">
 
-const APP_VERSION = "v1.0.6";
+const APP_VERSION = "v1.0.7";
 document.getElementById("version").innerText = APP_VERSION;
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
 
 let scene, camera, renderer;
-let raycaster, floor, reticle;
+let raycaster, floor;
 
 let targetRot = {x:0,y:0,z:0};
 let currentRot = {x:0,y:0,z:0};
@@ -177,51 +177,40 @@ function init() {
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  const ringGeo = new THREE.RingGeometry(0.15,0.2,32);
-  const ringMat = new THREE.MeshBasicMaterial({color:0xffffff});
-
-  reticle = new THREE.Mesh(ringGeo, ringMat);
-  reticle.rotation.x = -Math.PI/2;
-  scene.add(reticle);
-
   raycaster = new THREE.Raycaster();
 
-  window.addEventListener("click", spawnObject);
+  window.addEventListener("click", onTap);
 
   animate();
 }
 
-// RETICLE
-function updateReticle() {
-  const center = new THREE.Vector2(0,0);
-  raycaster.setFromCamera(center, camera);
+// 🔥 TAP POSITION FIX
+function onTap(e) {
+
+  const mouse = new THREE.Vector2(
+    (e.clientX / window.innerWidth) * 2 - 1,
+    -(e.clientY / window.innerHeight) * 2 + 1
+  );
+
+  raycaster.setFromCamera(mouse, camera);
 
   const hits = raycaster.intersectObject(floor);
 
-  if (hits.length > 0) {
-    reticle.visible = true;
-    reticle.position.copy(hits[0].point);
-  }
-}
+  if (hits.length === 0) return;
 
-// SPAWN (🔥 FIXED WORLD POSITION)
-function spawnObject() {
-  if (!reticle.visible) return;
-
-  const spawnPos = reticle.position.clone(); // 🔥 penting
+  const point = hits[0].point;
 
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(0.25,0.25,0.25),
     new THREE.MeshStandardMaterial({color:0xffffff})
   );
 
-  mesh.position.copy(spawnPos);
+  mesh.position.copy(point);
   mesh.position.y += 0.125;
 
   scene.add(mesh);
 }
 
-// LOOP
 function animate() {
   requestAnimationFrame(animate);
 
@@ -233,8 +222,6 @@ function animate() {
   camera.rotation.x = currentRot.x;
   camera.rotation.y = currentRot.y;
   camera.rotation.z = currentRot.z;
-
-  updateReticle();
 
   renderer.render(scene, camera);
 }
