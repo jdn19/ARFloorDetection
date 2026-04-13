@@ -107,24 +107,26 @@
   </div>
 </div>
 
-<!-- VERSION -->
 <div id="version"></div>
 
 <div id="info">Tap layar untuk spawn object</div>
 
 <script type="module">
 
-// 🔥 EDIT VERSION DI SINI DOANG
-const APP_VERSION = "v1.0.3";
+// 🔥 VERSION
+const APP_VERSION = "v1.0.4";
 document.getElementById("version").innerText = APP_VERSION;
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
-import { DeviceOrientationControls } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/DeviceOrientationControls.js";
 
 let scene, camera, renderer;
-let raycaster, floor, controls, reticle;
+let raycaster, floor, reticle;
 
-// CAMERA
+// 🔥 GYRO DATA
+let targetRotation = { x:0, y:0, z:0 };
+let currentRotation = { x:0, y:0, z:0 };
+
+// CAMERA BG
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream => {
   document.getElementById("camera").srcObject = stream;
@@ -133,9 +135,16 @@ navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 // START
 window.startAR = async function() {
 
+  // iOS permission
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     await DeviceOrientationEvent.requestPermission();
   }
+
+  window.addEventListener("deviceorientation", (e) => {
+    targetRotation.y = THREE.MathUtils.degToRad(e.alpha || 0);
+    targetRotation.x = THREE.MathUtils.degToRad((e.beta || 0) - 90);
+    targetRotation.z = THREE.MathUtils.degToRad(e.gamma || 0);
+  });
 
   const home = document.getElementById("home");
   const glass = document.getElementById("glassOverlay");
@@ -165,9 +174,6 @@ function init() {
   renderer.shadowMap.enabled = true;
 
   document.body.appendChild(renderer.domElement);
-
-  // GYRO
-  controls = new DeviceOrientationControls(camera);
 
   // LIGHT
   const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
@@ -241,11 +247,19 @@ function spawnObject() {
   scene.add(mesh);
 }
 
-// LOOP
+// LOOP (🔥 SMOOTH GYRO)
 function animate() {
   requestAnimationFrame(animate);
 
-  if (controls) controls.update();
+  // smoothing biar gak geter
+  currentRotation.x += (targetRotation.x - currentRotation.x) * 0.1;
+  currentRotation.y += (targetRotation.y - currentRotation.y) * 0.1;
+  currentRotation.z += (targetRotation.z - currentRotation.z) * 0.1;
+
+  camera.rotation.order = "YXZ";
+  camera.rotation.x = currentRotation.x;
+  camera.rotation.y = currentRotation.y;
+  camera.rotation.z = currentRotation.z;
 
   updateReticle();
 
