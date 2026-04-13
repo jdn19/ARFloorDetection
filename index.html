@@ -1,201 +1,228 @@
-  <!DOCTYPE html>
-  <html>
-  <head>
-  <meta charset="utf-8">
-  <title>Vision AR</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Vision AR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
-  <style>
-    body { margin:0; overflow:hidden; font-family:sans-serif; }
+<style>
+  body { margin:0; overflow:hidden; font-family:sans-serif; }
 
-    /* CAMERA */
-    video {
-      position:fixed;
-      top:0; left:0;
-      width:100%; height:100%;
-      object-fit:cover;
-      z-index:-2;
-    }
+  video {
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    z-index:-2;
+  }
 
-    /* GLASS OVERLAY (ONLY HOMEPAGE) */
-    #glassOverlay {
-      position:fixed;
-      top:0; left:0;
-      width:100%; height:100%;
-      backdrop-filter: blur(10px) saturate(140%);
-      -webkit-backdrop-filter: blur(10px) saturate(140%);
-      background: rgba(255,255,255,0.05);
-      z-index:-1;
-      pointer-events:none;
-    }
+  #glassOverlay {
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    background: rgba(255,255,255,0.05);
+    z-index:-1;
+    pointer-events:none;
+  }
 
-    /* HOMEPAGE */
-    #home {
-      position:fixed;
-      top:0; left:0;
-      width:100%; height:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index:10;
-    }
+  #home {
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:10;
+  }
 
-    .glass-card {
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background: rgba(255,255,255,0.08);
-      border-radius: 24px;
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 30px;
-      text-align:center;
-      color:white;
-      width: 80%;
-      max-width: 320px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-      animation: float 4s ease-in-out infinite;
-    }
+  .glass-card {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255,255,255,0.08);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 30px;
+    text-align:center;
+    color:white;
+    width: 80%;
+    max-width: 320px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    animation: float 4s ease-in-out infinite;
+  }
 
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
-      100% { transform: translateY(0px); }
-    }
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
 
-    .title {
-      font-size:22px;
-      margin-bottom:10px;
-    }
+  .title { font-size:22px; margin-bottom:10px; }
+  .subtitle { opacity:0.7; margin-bottom:20px; }
 
-    .subtitle {
-      opacity:0.7;
-      margin-bottom:20px;
-    }
+  .btn {
+    padding:14px 25px;
+    border-radius:999px;
+    border:none;
+    background: rgba(255,255,255,0.2);
+    color:white;
+    cursor:pointer;
+  }
 
-    .btn {
-      padding:14px 25px;
-      border-radius:999px;
-      border:none;
-      background: rgba(255,255,255,0.2);
-      color:white;
-      cursor:pointer;
-    }
+  #info {
+    position:absolute;
+    top:20px;
+    width:100%;
+    text-align:center;
+    color:white;
+    z-index:5;
+    display:none;
+  }
+</style>
+</head>
 
-    /* AR INFO */
-    #info {
-      position:absolute;
-      top:20px;
-      width:100%;
-      text-align:center;
-      color:white;
-      z-index:5;
-      display:none;
-    }
-  </style>
-  </head>
+<body>
 
-  <body>
+<video id="camera" autoplay playsinline></video>
+<div id="glassOverlay"></div>
 
-  <video id="camera" autoplay playsinline></video>
-  <div id="glassOverlay"></div>
-
-  <div id="home">
-    <div class="glass-card">
-      <div class="title">Vision AR</div>
-      <div class="subtitle">Seamless Reality Experience</div>
-      <button class="btn" onclick="startAR()">Enter</button>
-    </div>
+<div id="home">
+  <div class="glass-card">
+    <div class="title">Vision AR</div>
+    <div class="subtitle">Seamless Reality Experience</div>
+    <button class="btn" onclick="startAR()">Enter</button>
   </div>
+</div>
 
-  <div id="info">Tap layar untuk spawn object</div>
+<div id="info">Tap layar untuk spawn object</div>
 
-  <script type="module">
-  import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
+import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/webxr/ARButton.js";
 
-  let scene, camera, renderer;
+let scene, camera, renderer;
+let controller;
+let hitTestSource = null;
+let hitTestSourceRequested = false;
+let currentHitPose = null;
 
-  // CAMERA START
-  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
-  .then(function(stream){
-    document.getElementById("camera").srcObject = stream;
+// ❌ getUserMedia lo gue biarin tapi gak kepake di AR asli
+navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+.then(stream => {
+  document.getElementById("camera").srcObject = stream;
+});
+
+// START AR
+window.startAR = function() {
+  const home = document.getElementById("home");
+  const glass = document.getElementById("glassOverlay");
+
+  home.style.transition = "opacity 0.4s ease";
+  glass.style.transition = "opacity 0.4s ease";
+
+  home.style.opacity = "0";
+  glass.style.opacity = "0";
+
+  setTimeout(() => {
+    home.style.display = "none";
+    glass.style.display = "none";
+    document.getElementById("info").style.display = "block";
+
+    init();
+  }, 400);
+};
+
+// INIT AR
+function init() {
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
+
+  renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
+
+  document.body.appendChild(renderer.domElement);
+
+  // AR BUTTON (hidden auto start)
+  const button = ARButton.createButton(renderer, {
+    requiredFeatures: ["hit-test"]
+  });
+  button.style.display = "none";
+  document.body.appendChild(button);
+  button.click();
+
+  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+  scene.add(light);
+
+  controller = renderer.xr.getController(0);
+  controller.addEventListener("select", onSelect);
+  scene.add(controller);
+
+  renderer.setAnimationLoop(render);
+}
+
+// TAP → SPAWN KE LANTAI ASLI
+function onSelect() {
+  if (!currentHitPose) return;
+
+  const geo = new THREE.BoxGeometry(0.2,0.2,0.2);
+  const mat = new THREE.MeshStandardMaterial({
+    color:0xffffff,
+    metalness:0.8,
+    roughness:0.2
   });
 
-  // START AR
-  window.startAR = function() {
-    const home = document.getElementById("home");
-    const glass = document.getElementById("glassOverlay");
+  const mesh = new THREE.Mesh(geo, mat);
 
-    // fade effect
-    home.style.transition = "opacity 0.4s ease";
-    glass.style.transition = "opacity 0.4s ease";
+  mesh.position.setFromMatrixPosition(currentHitPose.transform.matrix);
+  scene.add(mesh);
+}
 
-    home.style.opacity = "0";
-    glass.style.opacity = "0";
+// LOOP + HIT TEST
+function render(timestamp, frame) {
+  if (frame) {
+    const refSpace = renderer.xr.getReferenceSpace();
+    const session = renderer.xr.getSession();
 
-    setTimeout(function(){
-      home.style.display = "none";
-      glass.style.display = "none";
-
-      document.getElementById("info").style.display = "block";
-
-      init();
-    }, 400);
-  };
-
-  // INIT THREE
-  function init() {
-    scene = new THREE.Scene();
-
-    camera = new THREE.PerspectiveCamera(
-      70,
-      window.innerWidth / window.innerHeight,
-      0.01,
-      20
-    );
-
-    renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-    scene.add(light);
-
-    window.addEventListener("click", function(e){
-      const x = (e.clientX / window.innerWidth) * 2 - 1;
-      const y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-      const vector = new THREE.Vector3(x,y,0.5).unproject(camera);
-
-      const geo = new THREE.BoxGeometry(0.2,0.2,0.2);
-      const mat = new THREE.MeshStandardMaterial({
-        color:0xffffff,
-        metalness:0.8,
-        roughness:0.2
+    if (!hitTestSourceRequested) {
+      session.requestReferenceSpace("viewer").then(space => {
+        session.requestHitTestSource({space: space}).then(source => {
+          hitTestSource = source;
+        });
       });
 
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.copy(vector);
+      session.addEventListener("end", () => {
+        hitTestSourceRequested = false;
+        hitTestSource = null;
+      });
 
-      scene.add(mesh);
-    });
+      hitTestSourceRequested = true;
+    }
 
-    animate();
+    if (hitTestSource) {
+      const hits = frame.getHitTestResults(hitTestSource);
+
+      if (hits.length > 0) {
+        const hit = hits[0];
+        currentHitPose = hit.getPose(refSpace);
+      }
+    }
   }
 
-  // LOOP
-  function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-  }
+  renderer.render(scene, camera);
+}
 
-  // RESIZE
-  window.addEventListener("resize", function(){
-    if (!camera || !renderer) return;
+// RESIZE
+window.addEventListener("resize", () => {
+  if (!camera || !renderer) return;
 
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-  </script>
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
 
-  </body>
-  </html>
+</body>
+</html>
