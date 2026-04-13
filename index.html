@@ -1,0 +1,201 @@
+  <!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8">
+  <title>Vision AR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+  <style>
+    body { margin:0; overflow:hidden; font-family:sans-serif; }
+
+    /* CAMERA */
+    video {
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      object-fit:cover;
+      z-index:-2;
+    }
+
+    /* GLASS OVERLAY (ONLY HOMEPAGE) */
+    #glassOverlay {
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      backdrop-filter: blur(10px) saturate(140%);
+      -webkit-backdrop-filter: blur(10px) saturate(140%);
+      background: rgba(255,255,255,0.05);
+      z-index:-1;
+      pointer-events:none;
+    }
+
+    /* HOMEPAGE */
+    #home {
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:10;
+    }
+
+    .glass-card {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(255,255,255,0.08);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 30px;
+      text-align:center;
+      color:white;
+      width: 80%;
+      max-width: 320px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+
+    .title {
+      font-size:22px;
+      margin-bottom:10px;
+    }
+
+    .subtitle {
+      opacity:0.7;
+      margin-bottom:20px;
+    }
+
+    .btn {
+      padding:14px 25px;
+      border-radius:999px;
+      border:none;
+      background: rgba(255,255,255,0.2);
+      color:white;
+      cursor:pointer;
+    }
+
+    /* AR INFO */
+    #info {
+      position:absolute;
+      top:20px;
+      width:100%;
+      text-align:center;
+      color:white;
+      z-index:5;
+      display:none;
+    }
+  </style>
+  </head>
+
+  <body>
+
+  <video id="camera" autoplay playsinline></video>
+  <div id="glassOverlay"></div>
+
+  <div id="home">
+    <div class="glass-card">
+      <div class="title">Vision AR</div>
+      <div class="subtitle">Seamless Reality Experience</div>
+      <button class="btn" onclick="startAR()">Enter</button>
+    </div>
+  </div>
+
+  <div id="info">Tap layar untuk spawn object</div>
+
+  <script type="module">
+  import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
+
+  let scene, camera, renderer;
+
+  // CAMERA START
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+  .then(function(stream){
+    document.getElementById("camera").srcObject = stream;
+  });
+
+  // START AR
+  window.startAR = function() {
+    const home = document.getElementById("home");
+    const glass = document.getElementById("glassOverlay");
+
+    // fade effect
+    home.style.transition = "opacity 0.4s ease";
+    glass.style.transition = "opacity 0.4s ease";
+
+    home.style.opacity = "0";
+    glass.style.opacity = "0";
+
+    setTimeout(function(){
+      home.style.display = "none";
+      glass.style.display = "none";
+
+      document.getElementById("info").style.display = "block";
+
+      init();
+    }, 400);
+  };
+
+  // INIT THREE
+  function init() {
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(
+      70,
+      window.innerWidth / window.innerHeight,
+      0.01,
+      20
+    );
+
+    renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+    scene.add(light);
+
+    window.addEventListener("click", function(e){
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      const vector = new THREE.Vector3(x,y,0.5).unproject(camera);
+
+      const geo = new THREE.BoxGeometry(0.2,0.2,0.2);
+      const mat = new THREE.MeshStandardMaterial({
+        color:0xffffff,
+        metalness:0.8,
+        roughness:0.2
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(vector);
+
+      scene.add(mesh);
+    });
+
+    animate();
+  }
+
+  // LOOP
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+
+  // RESIZE
+  window.addEventListener("resize", function(){
+    if (!camera || !renderer) return;
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+  </script>
+
+  </body>
+  </html>
