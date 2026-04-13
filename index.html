@@ -70,7 +70,6 @@
     cursor:pointer;
   }
 
-  /* 🔥 VERSION (INI DOANG YANG DITAMBAH) */
   #version {
     position:fixed;
     bottom:20px;
@@ -108,15 +107,14 @@
   </div>
 </div>
 
-<!-- 🔥 VERSION TEXT -->
 <div id="version"></div>
 
 <div id="info">Tap layar untuk spawn object</div>
 
 <script type="module">
 
-// 🔥 EDIT DI SINI DOANG
-const APP_VERSION = "v1.0.0";
+// 🔥 VERSION
+const APP_VERSION = "v1.0.5";
 document.getElementById("version").innerText = APP_VERSION;
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
@@ -124,14 +122,29 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.m
 let scene, camera, renderer;
 let raycaster, floor, reticle;
 
-// CAMERA
+// GYRO
+let targetRot = {x:0,y:0,z:0};
+let currentRot = {x:0,y:0,z:0};
+
+// CAMERA BG
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream => {
   document.getElementById("camera").srcObject = stream;
 });
 
 // START
-window.startAR = function() {
+window.startAR = async function() {
+
+  // iOS permission
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    await DeviceOrientationEvent.requestPermission();
+  }
+
+  window.addEventListener("deviceorientation", (e)=>{
+    targetRot.y = THREE.MathUtils.degToRad(e.alpha || 0);
+    targetRot.x = THREE.MathUtils.degToRad((e.beta || 0) - 90);
+    targetRot.z = THREE.MathUtils.degToRad(e.gamma || 0);
+  });
 
   const home = document.getElementById("home");
   const glass = document.getElementById("glassOverlay");
@@ -139,13 +152,13 @@ window.startAR = function() {
   home.style.opacity = "0";
   glass.style.opacity = "0";
 
-  setTimeout(() => {
+  setTimeout(()=>{
     home.style.display = "none";
     glass.style.display = "none";
     document.getElementById("info").style.display = "block";
 
     init();
-  }, 400);
+  },400);
 };
 
 // INIT
@@ -154,25 +167,29 @@ function init() {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
-  camera.position.set(0, 1.6, 2);
+  camera.position.set(0,1.6,2);
 
   renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
 
   document.body.appendChild(renderer.domElement);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-  scene.add(light);
+  // LIGHT
+  const hemi = new THREE.HemisphereLight(0xffffff,0x444444,1);
+  scene.add(hemi);
 
+  // FLOOR
   floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20,20),
-    new THREE.MeshBasicMaterial({ visible:false })
+    new THREE.MeshBasicMaterial({visible:false})
   );
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  const ringGeo = new THREE.RingGeometry(0.15, 0.2, 32);
-  const ringMat = new THREE.MeshBasicMaterial({ color:0xffffff });
+  // RETICLE
+  const ringGeo = new THREE.RingGeometry(0.15,0.2,32);
+  const ringMat = new THREE.MeshBasicMaterial({color:0xffffff});
 
   reticle = new THREE.Mesh(ringGeo, ringMat);
   reticle.rotation.x = -Math.PI/2;
@@ -193,15 +210,18 @@ function updateReticle() {
   const hits = raycaster.intersectObject(floor);
 
   if (hits.length > 0) {
+    reticle.visible = true;
     reticle.position.copy(hits[0].point);
   }
 }
 
 // SPAWN
 function spawnObject() {
+  if (!reticle.visible) return;
+
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(0.25,0.25,0.25),
-    new THREE.MeshBasicMaterial({ color:0xffffff })
+    new THREE.MeshStandardMaterial({color:0xffffff})
   );
 
   mesh.position.copy(reticle.position);
@@ -210,9 +230,18 @@ function spawnObject() {
   scene.add(mesh);
 }
 
-// LOOP
+// LOOP (SMOOTH GYRO)
 function animate() {
   requestAnimationFrame(animate);
+
+  currentRot.x += (targetRot.x - currentRot.x)*0.1;
+  currentRot.y += (targetRot.y - currentRot.y)*0.1;
+  currentRot.z += (targetRot.z - currentRot.z)*0.1;
+
+  camera.rotation.order = "YXZ";
+  camera.rotation.x = currentRot.x;
+  camera.rotation.y = currentRot.y;
+  camera.rotation.z = currentRot.z;
 
   updateReticle();
 
@@ -220,7 +249,7 @@ function animate() {
 }
 
 // RESIZE
-window.addEventListener("resize", () => {
+window.addEventListener("resize", ()=>{
   if (!camera || !renderer) return;
 
   camera.aspect = window.innerWidth/window.innerHeight;
