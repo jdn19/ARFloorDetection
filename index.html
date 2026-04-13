@@ -17,7 +17,7 @@
     z-index:-2;
   }
 
-  /* GLASS OVERLAY (ONLY HOMEPAGE) */
+  /* GLASS OVERLAY */
   #glassOverlay {
     position:fixed;
     top:0; left:0;
@@ -61,15 +61,8 @@
     100% { transform: translateY(0px); }
   }
 
-  .title {
-    font-size:22px;
-    margin-bottom:10px;
-  }
-
-  .subtitle {
-    opacity:0.7;
-    margin-bottom:20px;
-  }
+  .title { font-size:22px; margin-bottom:10px; }
+  .subtitle { opacity:0.7; margin-bottom:20px; }
 
   .btn {
     padding:14px 25px;
@@ -80,7 +73,19 @@
     cursor:pointer;
   }
 
-  /* AR INFO */
+  /* VERSION LABEL */
+  #version {
+    position:absolute;
+    bottom:20px;
+    width:100%;
+    text-align:center;
+    color:white;
+    opacity:0.5;
+    font-size:12px;
+    letter-spacing:1px;
+  }
+
+  /* INFO */
   #info {
     position:absolute;
     top:20px;
@@ -104,29 +109,36 @@
     <div class="subtitle">Seamless Reality Experience</div>
     <button class="btn" onclick="startAR()">Enter</button>
   </div>
+
+  <!-- VERSION -->
+  <div id="version">v1.0.0</div>
 </div>
 
 <div id="info">Tap layar untuk spawn object</div>
 
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js";
+import { DeviceOrientationControls } from "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/DeviceOrientationControls.js";
 
 let scene, camera, renderer;
-let raycaster, floor;
+let raycaster, floor, controls, reticle;
 
-// CAMERA
+// CAMERA BG
 navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
 .then(stream => {
   document.getElementById("camera").srcObject = stream;
 });
 
 // START
-window.startAR = function() {
+window.startAR = async function() {
+
+  // permission gyro (iOS)
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    await DeviceOrientationEvent.requestPermission();
+  }
+
   const home = document.getElementById("home");
   const glass = document.getElementById("glassOverlay");
-
-  home.style.transition = "opacity 0.4s ease";
-  glass.style.transition = "opacity 0.4s ease";
 
   home.style.opacity = "0";
   glass.style.opacity = "0";
@@ -152,30 +164,27 @@ function init() {
     20
   );
 
-  // 🔥 kamera natural (tinggi manusia)
   camera.position.set(0, 1.6, 2);
-  camera.lookAt(0, 0, 0);
 
   renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
   renderer.setSize(window.innerWidth, window.innerHeight);
-
-  // 🔥 SHADOW ON
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   document.body.appendChild(renderer.domElement);
 
-  // 🔥 LIGHTING REALISTIC
+  // GYRO
+  controls = new DeviceOrientationControls(camera);
+
+  // LIGHT
   const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
   scene.add(hemi);
 
   const dir = new THREE.DirectionalLight(0xffffff, 1);
   dir.position.set(2,4,2);
   dir.castShadow = true;
-  dir.shadow.mapSize.set(1024,1024);
   scene.add(dir);
 
-  // 🔥 FLOOR (INVISIBLE + SHADOW)
+  // FLOOR
   floor = new THREE.Mesh(
     new THREE.PlaneGeometry(20,20),
     new THREE.ShadowMaterial({ opacity: 0.3 })
@@ -184,49 +193,68 @@ function init() {
   floor.receiveShadow = true;
   scene.add(floor);
 
+  // RETICLE
+  const ringGeo = new THREE.RingGeometry(0.15, 0.2, 32);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color:0xffffff,
+    transparent:true,
+    opacity:0.7
+  });
+
+  reticle = new THREE.Mesh(ringGeo, ringMat);
+  reticle.rotation.x = -Math.PI/2;
+  scene.add(reticle);
+
   raycaster = new THREE.Raycaster();
 
-  // TAP SPAWN
   window.addEventListener("click", spawnObject);
 
   animate();
 }
 
-// SPAWN
-function spawnObject(e) {
-
-  const mouse = new THREE.Vector2(
-    (e.clientX / window.innerWidth) * 2 - 1,
-    -(e.clientY / window.innerHeight) * 2 + 1
-  );
-
-  raycaster.setFromCamera(mouse, camera);
+// UPDATE RETICLE
+function updateReticle() {
+  const center = new THREE.Vector2(0,0);
+  raycaster.setFromCamera(center, camera);
 
   const hits = raycaster.intersectObject(floor);
 
   if (hits.length > 0) {
-    const point = hits[0].point;
-
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.25,0.25,0.25),
-      new THREE.MeshStandardMaterial({
-        color:0xffffff,
-        metalness:0.6,
-        roughness:0.3
-      })
-    );
-
-    mesh.position.copy(point);
-    mesh.position.y += 0.125;
-    mesh.castShadow = true;
-
-    scene.add(mesh);
+    reticle.visible = true;
+    reticle.position.copy(hits[0].point);
+  } else {
+    reticle.visible = false;
   }
+}
+
+// SPAWN
+function spawnObject() {
+  if (!reticle.visible) return;
+
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(0.25,0.25,0.25),
+    new THREE.MeshStandardMaterial({
+      color:0xffffff,
+      metalness:0.6,
+      roughness:0.3
+    })
+  );
+
+  mesh.position.copy(reticle.position);
+  mesh.position.y += 0.125;
+  mesh.castShadow = true;
+
+  scene.add(mesh);
 }
 
 // LOOP
 function animate() {
   requestAnimationFrame(animate);
+
+  if (controls) controls.update();
+
+  updateReticle();
+
   renderer.render(scene, camera);
 }
 
